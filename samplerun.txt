@@ -1,0 +1,5 @@
+ 1998  EXIT
+ 1999  exit
+ 2000  cd /home/tede/n55115/Joblib/Utils/file_processing/FILE_QUERY
+ 2001  FQ.py MNCPDTDF_20181016.TXT 2 4 0100 0101 0102
+ 2002  history | tail -n 5 > samplerun.txt

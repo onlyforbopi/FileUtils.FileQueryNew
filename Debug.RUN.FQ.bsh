@@ -1,0 +1,64 @@
+#!/bin/bash
+
+
+#Constants
+#readonly 	ARGS_NBR=5
+readonly 	THIS_JOB=${0##*/}
+readonly    PROD_PATH="/home/tede/n55115/Joblib/Utils/file_processing/FILE_QUERY/"
+
+# Functions.
+function chk_abnd()
+{
+  local     abnd
+  
+  abnd=$1
+  date
+  if [ $abnd -ne 0 ]; then
+    echo "Failed with status " $abnd; echo
+    #rm +++++++++++++
+    exit $abnd
+    #return $abnd
+  else
+    echo "Done"; echo
+  fi
+}
+
+function chk_args()
+{
+  local        nbr_args=$1
+  
+  if [ $nbr_args -ne $ARGS_NBR ]; then
+      echo "Wrong number of parameters = " $nbr_args
+      exit 69
+  else
+	 echo "User has supplied the correct number of arguments"
+     return 0
+  fi
+}
+
+function assignvars()
+{
+	FILE_IN=$1
+	awkstart=$2
+	awklength=$3
+	awkpattern=$4 
+
+	echo "Provided file:" $FILE_IN
+	echo "Field start:"   $awkstart
+	echo "Field length: " $awklength
+	echo "Pattern: "      $awkpattern
+	echo "Pattern2: "     $otherpattern
+	
+}
+
+
+##################################################################
+# Script Start
+echo $THIS_JOB " started at " `date`; echo
+
+echo "Checking number of arguments"
+#chk_args $#
+
+assignvars $1 $2 $3 $4 $5 $6
+
+python "$PROD_PATH"FQ.py $FILE_IN $awkstart $awklength $awkpattern 

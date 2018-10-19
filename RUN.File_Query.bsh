@@ -1,0 +1,108 @@
+#!/bin/bash
+
+#############################################################
+#	Change Encoding											#
+#															#
+#	Function : Finds encoding of file, changes it 			#
+#	Destination encoding : Change DEST_ENC variable			#
+#   SET AS PARAMETER ^^^^^^									#	
+#	Caution : ascii / binary remain as they are				#
+#															#
+#	1. Change Encoding (Predefined utf-8)					#
+#	2. User Defined Encoding 								#
+#	2. List Known Character Sets							#
+#	3. Display Usage/Help									#
+#	4. Exit													#
+#
+#	Input : File or Directory (Directory needs trailing \)
+#	Output : Output files are stored in the same directory
+#
+#
+#   													 	#		
+#	Method : Uses file -bi to find encoding				 	#
+#   Uses awk | cut to trim it, then changes it with iconv	#
+#############################################################
+
+
+#Constants
+readonly 	ARGS_NBR=4
+readonly 	THIS_JOB=${0##*/}
+
+#Variables
+declare 	FILE=$1
+
+declare     FILE_ENC
+declare     DEST_ENC="utf-8"
+declare 	pgm
+declare 	mode
+
+
+# Functions.
+function chk_abnd()
+{
+  local     abnd
+  
+  abnd=$1
+  date
+  if [ $abnd -ne 0 ]; then
+    echo "Failed with status " $abnd; echo
+    #rm +++++++++++++
+    exit $abnd
+    #return $abnd
+  else
+    echo "Done"; echo
+  fi
+}
+
+function chk_args()
+{
+  local        nbr_args=$1
+  
+  if [ $nbr_args -ne $ARGS_NBR ]; then
+      echo "Wrong number of parameters = " $nbr_args
+      exit 69
+  else
+	 echo "User has supplied the correct number of arguments"
+     return 0
+  fi
+}
+
+
+function assignvars()
+{
+	FILE_IN=$1
+	awkstart=$2
+	awklength=$3
+	awkpattern=$4
+
+	echo "Provided file:" $FILE_IN
+	echo "Field start:"   $awkstart
+	echo "Field length: " $awklength
+	echo "Pattern: "      $awkpattern
+	
+}
+
+
+
+
+##################################################################
+# Script Start
+echo $THIS_JOB " started at " `date`; echo
+
+echo "Checking number of arguments"
+chk_args $#
+
+assignvars $1 $2 $3 $4
+
+# Find encoding of file, store it into FILE_ENC
+#awk -v s="$awkstart" -v l="$awklength" -v pat="$awkpattern" ' substr($0, s, l)==pat { print s ; print l ; print pat ;  print $0 }' $FILE_IN > $FILE_IN.query
+gawk -b -v s="$awkstart"  -v l="$awklength" \
+		-v pat="$awkpattern" \
+		-f /home/tede/n55115/Joblib/Utils/file_processing/FILE_QUERY/testawk.awk $FILE_IN > $FILE_IN.filter
+
+
+	
+##############################################################
+# Script end
+echo $THIS_JOB " ended at " `date`; echo
+#

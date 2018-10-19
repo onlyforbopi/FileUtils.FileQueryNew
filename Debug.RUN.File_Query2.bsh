@@ -1,0 +1,343 @@
+#!/bin/bash
+
+#################################################################################################
+#                                                                                                                                                                                                                                                                                           ##
+#  Job: RUN.CleanCharacters.bsh	
+#  Location: /home/tede/n55115/Joblib/Utils/file_processing/FILE_CLEANCHAR
+#  
+#  Usage:RUN.DetectCharacters.bsh <dir|file>
+#  Parameters: <dir|file> : Directory or single file, the script will detect input
+#
+#  Calls: cleanchara.bsh
+#
+#  Global constants: DIR_IN
+#				
+#                    
+#  Function: wrapper script that calls cleanchara.bsh which:
+#			 - Iterates over lines of file provided or
+#            - Iterates over lines foreach file in directory <dir> (non recursively).
+#            - Processes each file.
+#            - Writes output file (with proper name) in directory <dir>.
+#
+#  Output: - Output files in directory <dir>.
+#          - Logs (outlist/errlist) in directory where job is ran.
+#
+#  Menu Options :
+#	
+#		1. Clean Null values                                               		
+#	    2. Clean Extended Ascii (+Greek Font)									
+#	    3. Clean non printable characters										
+#	    4. Clean non printable and Extended Ascii (+Greek)						
+#	    5. Clean non printable and extended ascii (greek characters notincluded)
+#	    6. Clean Spam Characters (K. Athanasopoulos)                            
+#	    7. Clean all of the above                                               
+#	
+#	
+#	
+#
+#################################################################################################
+
+
+#########################################################
+# I/O
+export 			DIR_IN
+
+#########################################################
+# Constants
+readonly       ARGS_NBR=4
+readonly       JOB_PRF="File_Query"
+readonly       JOB_SUF=".bsh"
+readonly       LST_SUF=".out"
+readonly       ERR_SUF=".err"
+readonly       THIS_JOB=${0##*/}
+readonly       LOG_FILE="/home/tede/n55115/Joblib/Utils/file_processing/FILE_QUERY/$THIS_JOB.LOG"
+
+##########################################################
+# Variables
+declare        step
+declare        pgm
+declare        pgm_full_path
+declare        mode
+declare        DIR_IN
+
+##########################################################
+# Functions
+
+function usage(){
+
+	#  Display usage
+	#  Called as : usage
+
+echo "
+Syntax :
+
+$THIS_JOB [ Filename | Directory ]
+ ex. $THIS_JOB filename.txt  
+ Output into : Directory of filename.txt
+		
+ ex. $THIS_JOB /home/tede/n55115/dir/
+ Output into : Directory specified "		
+}
+
+
+function chk_abnd()
+{
+	# Check return value
+	# Called as chk_abnd $?
+
+  local     abnd
+  
+  abnd=$1
+  echo "Checking return value.."
+  date
+  if [ $abnd -ne 0 ]; then
+    echo "Failed with status " $abnd; echo
+    #rm +++++++++++++
+    exit $abnd
+    #return $abnd
+  else
+    echo "Done"; echo
+  fi
+}
+
+
+function constr_file_names()
+{
+	# Set run variables and filenames .
+	# Called as : constr_file_names
+ 
+  DIR_IN=$1
+  pat_start=$2
+  pat_length=$3
+  patternmat=$4
+  chk_abnd $? # Check return status.
+
+  return 0
+}
+						
+function constr_job_name()
+{
+	# Construct job names
+	# Called as : constr_job_name
+
+  job_name=$JOB_PRF$JOB_SUF
+  out_name=$JOB_PRF$LST_SUF
+  err_name=$JOB_PRF$ERR_SUF
+  chk_abnd $? # Check return status.
+
+  return 0
+}
+
+
+function get_script_dir () {
+
+	# Function : Constructs absolute path of script run
+	# Called as get_script_dir $0
+	
+     SOURCE="${BASH_SOURCE[0]}"																												
+     while [ -h "$SOURCE" ]; do
+          DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+          SOURCE="$( readlink "$SOURCE" )"
+          
+          [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+     done
+     DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+     echo "$DIR"
+}			
+			
+			
+function chk_args()
+{
+	# Checks number of arguments
+	# Called as chk_args $#
+
+  local        nbr_args=$1
+  
+  if [ $nbr_args -ne $ARGS_NBR ]; then
+      echo "Wrong number of parameters = " $nbr_args
+      usage
+      exit 69
+  else
+	 echo "User has supplied the correct number of arguments"
+     # parm_srch_str=$2
+     # parm_file_out=$3
+     return 0
+  fi
+}
+
+						
+function set_mode()
+{
+	# Detects whether passed parameter is dir or single file
+	# Assigns mode
+	# Called as : set_mode
+
+	if [ -d $DIR_IN ]
+	then
+		mode="Directory"
+	else 
+	
+		if [ -e $DIR_IN ]
+		then
+			mode="Single_File"
+		else
+			echo "Invalid Input, Parameter is neither a file or directory"
+			exit 69
+		fi
+	fi		
+}
+
+function checkfileexist()
+{
+	# Function : Checks if given file exists
+	# Note : Checks also if its a file or directory
+	# Called as : checkfileexist $1
+	
+	FILETEST=$1
+	if [ -f $FILETEST ]; then
+		echo "File $FILETEST Exists"; echo "Proceeding..."; echo
+	elif [ -d $FILETEST ]; then
+		echo "Directory $FILETEST Exists"; echo "Proceeding..."; echo
+	else
+		echo "The File $FILE Does Not Exist"; echo
+		exit 
+fi
+}
+
+function removeoldrunfiles()
+{
+	# Performs cleanup
+	# Removes runfiles
+	
+	outfile=$1
+	errfile=$2
+	rm $outfile
+	rm $errfile	
+}
+
+function runreport()
+{
+	
+	echo "Script will run on mode : $mode : ";
+	echo "Script will perform operation : $operation ";
+	echo "File / Directory provided: $DIR_IN "
+	echo "Pattern start: $pat_start "
+	echo "Pattern length: $pat_length "
+	echo "Pattern: $patternmat"
+
+
+}
+
+##################################################################			
+# Script Start
+echo "------------------------------------------------------"
+echo $THIS_JOB " started at " `date`; echo
+
+
+# Check arguments
+echo "Checking number of arguments..."
+chk_args $#
+chk_abnd $?
+echo "--"; echo
+				
+# Construct file names
+echo "Constructing File names..."; 
+constr_file_names $1 $2 $3 $4
+echo "--"; echo
+
+# Call Job .
+echo "Constructing Job name..."
+constr_job_name
+echo "--"; echo
+
+removeoldrunfiles $out_name $err_name
+
+#Set mode
+echo "Setting script mode"
+set_mode
+chk_abnd $?
+echo "--"; echo
+
+# Check if files / directories exist
+checkfileexist $1
+
+# Printing job names
+echo "Submit Job " $job_name " ..."
+echo "out_name = " $out_name
+echo "err_name = " $err_name	
+echo "--"; echo
+
+# Printing script mode	
+runreport
+
+
+echo "--"; echo
+	
+	case $mode in
+	
+	
+# Single File Input
+		Single_File) 
+		echo $DIR_IN
+			
+			noffiles=1
+			counter=1
+			$job_name $DIR_IN $pat_start $pat_length $patternmat 1>$out_name 2>$err_name
+			chk_abnd $?
+		;;
+		
+		
+# Multiple File Input
+		Directory)
+		
+		echo "Performing job on directory $DIR_IN"
+		echo "Output directory in $(get_script_dir $0)"; 
+		
+		#Count files in directory
+		noffiles=$(($(ls -l $DIR_IN | wc -l ) - 1))
+		echo "Directory $DIR_IN contains $noffiles files"; echo "--"; echo
+		
+		# Iterate over files in directory
+		for FILE in $DIR_IN*.*	
+		do
+			# Increment counter
+			counter=$(($counter +1 ))
+			echo "Performing job on file : $FILE"
+		
+			# Call Job
+			$job_name $DIR_IN $pat_start $pat_length $patternmat 1>$out_name 2>$err_name
+			chk_abnd $?
+		
+		done
+		;;
+	esac
+
+echo "--"	
+	
+###################################################################
+# Controls and Reporting
+
+# Check number of files I/O
+echo "Checking input/output..."
+echo "Number of input files = $noffiles"
+echo "Number of files processed = $counter"
+echo "--"
+if [[ $counter != $noffiles ]]
+then
+	echo "Certain files were not processed. Check input and run again."
+else
+	echo "All input files have been processed "
+fi
+
+echo
+	
+###################################################################
+# Logging
+
+echo "$THIS_JOB performed at `date` :: Subscript = $job_name :: Mode = $mode :: Inputs = $DIR_IN" >> $LOG_FILE
+
+############################################################################
+# End of script.
+# 
+echo $THIS_JOB " ended at " `date`; echo
+#
